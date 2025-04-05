@@ -12,11 +12,16 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"taskease/config"
 	"time"
 )
 
 func main() {
 	r := chi.NewRouter()
+	cfg := config.LoadConfig()
+
+	log.Printf("Server port: %s", cfg.ServerPort)
+	log.Printf("Default page size: %d", cfg.DefaultPageSize)
 
 	// Add middleware
 	r.Use(middleware.RequestID)
@@ -32,7 +37,7 @@ func main() {
 	})
 
 	// Start the server
-	serverAddr := fmt.Sprintf(":%s", "8080")
+	serverAddr := fmt.Sprintf(":%s", cfg.ServerPort)
 	server := &http.Server{
 		Addr:         serverAddr,
 		Handler:      r,
