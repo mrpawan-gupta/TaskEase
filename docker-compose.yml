@@ -1,0 +1,42 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: taskease-app
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=taskease
+      - DB_PASSWORD=taskease_password
+      - DB_NAME=taskease
+      - DB_SSLMODE=disable
+    networks:
+      - taskease-network
+    restart: unless-stopped
+
+  db:
+    image: postgres:15-alpine
+    container_name: taskease-db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=taskease
+      - POSTGRES_PASSWORD=taskease_password
+      - POSTGRES_DB=taskease
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - taskease-network
+    restart: unless-stopped
+
+networks:
+  taskease-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

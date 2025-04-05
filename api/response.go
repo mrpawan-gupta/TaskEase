@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 	"time"
 )
@@ -14,7 +15,7 @@ type Response struct {
 	Timestamp  time.Time   `json:"timestamp"`
 }
 
-func NewResponse(success bool, message string, data interface{}, statusCode int) *Response {
+func SuccessResponse(success bool, message string, data interface{}, statusCode int) *Response {
 	return &Response{
 		Success:    success,
 		Message:    message,
@@ -22,10 +23,6 @@ func NewResponse(success bool, message string, data interface{}, statusCode int)
 		StatusCode: statusCode,
 		Timestamp:  time.Now(),
 	}
-}
-
-func SuccessResponse(message string, data interface{}) *Response {
-	return NewResponse(true, message, data, http.StatusOK)
 }
 
 func ErrorResponse(message string, errors []string, statusCode int) *Response {
@@ -40,7 +37,7 @@ func ErrorResponse(message string, errors []string, statusCode int) *Response {
 
 type PaginatedResponse struct {
 	Response
-	Pagination *Pagination `json:" ,omitempty"`
+	Pagination *Pagination `json:"pagination,omitempty"`
 }
 
 type Pagination struct {
@@ -61,4 +58,32 @@ func NewPaginatedResponse(success bool, message string, data interface{}, status
 		},
 		Pagination: pagination,
 	}
+}
+
+func WriteResponse(w http.ResponseWriter, r *Response) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(r.StatusCode)
+	err := json.NewEncoder(w).Encode(r)
+	if err != nil {
+		return
+	}
+}
+
+func WritePaginatedResponse(w http.ResponseWriter, r *PaginatedResponse) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(r.StatusCode)
+	err := json.NewEncoder(w).Encode(r)
+	if err != nil {
+		return
+	}
+}
+
+func WriteSuccessResponse(w http.ResponseWriter, message string, data interface{}, statusCode int) {
+	response := SuccessResponse(true, message, data, statusCode)
+	WriteResponse(w, response)
+}
+
+func WriteErrorResponse(w http.ResponseWriter, message string, errors []string, statusCode int) {
+	response := ErrorResponse(message, errors, statusCode)
+	WriteResponse(w, response)
 }

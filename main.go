@@ -12,7 +12,10 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"taskease/api"
 	"taskease/config"
+	"taskease/repository"
+	"taskease/service"
 	"time"
 )
 
@@ -22,6 +25,18 @@ func main() {
 
 	log.Printf("Server port: %s", cfg.ServerPort)
 	log.Printf("Default page size: %d", cfg.DefaultPageSize)
+	log.Printf("Database connection string: %s", cfg.GetDBConnectionString())
+
+	repo, err := repository.NewPostgresTaskRepository(cfg.GetDBConnectionString())
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+	defer func(repo *repository.TaskRepository) {
+		_ = repo.Close()
+	}(repo)
+
+	taskService := service.NewTaskService(repo)
+	taskHandler := api.NewTaskHandler(taskService)
 
 	// Add middleware
 	r.Use(middleware.RequestID)
@@ -30,6 +45,8 @@ func main() {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
 	r.Use(render.SetContentType(render.ContentTypeJSON))
+
+	api.SetupRoutes(r, taskHandler)
 
 	// Add health check endpoint
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -71,7 +88,7 @@ func main() {
 
 	// Start the server
 	log.Printf("Starting server on %s", serverAddr)
-	err := server.ListenAndServe()
+	err = server.ListenAndServe()
 	if err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
 	}
